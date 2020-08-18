@@ -25,7 +25,7 @@ type LoginReply struct {
 type OperationLogin struct{}
 
 func (ol OperationLogin) SearchByUsername(username string) (UserProfile, error) {
-	user, err := storage.Get(username)
+	user, err := storage.Get("username", username)
 	if err != nil {
 		return UserProfile{}, err
 	}
@@ -34,7 +34,7 @@ func (ol OperationLogin) SearchByUsername(username string) (UserProfile, error) 
 
 func (ol OperationLogin) InterpretRequest(payload io.Reader) LoginRequest {
 	body, _ := ioutil.ReadAll(payload)
-	var loginRequest = LoginRequest{}
+	var loginRequest LoginRequest
 	json.Unmarshal(body, &loginRequest)
 	return loginRequest
 }
@@ -52,11 +52,11 @@ func (ol OperationLogin) AuthenticateLogin(lr LoginRequest) bool {
 }
 
 func (ol OperationLogin) GetToken(lr LoginRequest) (string, error) {
-	userProfile, err := storage.Get(lr.UserName)
+	userProfile, err := storage.Get("username", lr.UserName)
 	if err != nil {
 		return "", errors.New("ERR_TOKEN_NOT_FOUND")
 	}
-	return userProfile.UserCredential.Token, nil
+	return userProfile.GetToken(), nil
 }
 
 func (ol OperationLogin) ComposeReply(w http.ResponseWriter, lr LoginReply) {
@@ -102,6 +102,30 @@ func (ol OperationLogin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+type OperationGetUserProfile struct{}
+
+func (ogup OperationGetUserProfile) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	user, err := ogup.SearchByToken(r.Header.Get("Authentication"))
+	if err != nil {
+		w.WriteHeader(http.StatusForbidden)
+	}
+	w.WriteHeader(http.StatusOK)
+	reply, err := json.Marshal(user.UserDetail)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	w.Write(reply)
+	return
+}
+
+func (ogup OperationGetUserProfile) SearchByToken(token string) (UserProfile, error) {
+	user, err := storage.Get("token", token)
+	if err != nil {
+		return UserProfile{}, err
+	}
+	return user, nil
+}
+
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "HomePage")
@@ -111,6 +135,17 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 func LoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Println("ACCESSED", r.Header.Get("User-Agent"))
+		next.ServeHTTP(w, r)
+	})
+}
+
+func TokenCheckMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("Authentication")
+		if len(auth) == 0 {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
 		next.ServeHTTP(w, r)
 	})
 }

@@ -8,12 +8,12 @@ type UserProfile struct {
 }
 
 type UserDetail struct {
-	UserId      string
-	Username    string
-	FirstName   string
-	LastName    string
-	PhoneNumber string
-	Email       string
+	UserId      string `json:"user_id"`
+	Username    string `json:"username"`
+	FirstName   string `json:"first_name"`
+	LastName    string `json:"last_name"`
+	PhoneNumber string `json:"phone_number"`
+	Email       string `json:"email`
 }
 
 type UserCredential struct {
@@ -27,4 +27,8 @@ func (up UserProfile) MatchUsernameAndPassword(userName string, password string)
 	requested := userName + ":" + password
 	log.Println(stored, requested)
 	return stored == requested
+}
+
+func (up UserProfile) GetToken() string {
+	return up.UserCredential.Token
 }
