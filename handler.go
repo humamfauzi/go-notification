@@ -24,6 +24,14 @@ type LoginReply struct {
 
 type OperationLogin struct{}
 
+func (ol OperationLogin) SearchByUsername(username string) (UserProfile, error) {
+	user, err := storage.Get(username)
+	if err != nil {
+		return UserProfile{}, err
+	}
+	return user, nil
+}
+
 func (ol OperationLogin) InterpretRequest(payload io.Reader) LoginRequest {
 	body, _ := ioutil.ReadAll(payload)
 	var loginRequest = LoginRequest{}
@@ -32,12 +40,15 @@ func (ol OperationLogin) InterpretRequest(payload io.Reader) LoginRequest {
 }
 
 func (ol OperationLogin) AuthenticateLogin(lr LoginRequest) bool {
-	_, err := storage.Get(lr.UserName)
+	userProfile, err := ol.SearchByUsername(lr.UserName)
 	if err != nil {
 		return false
-	} else {
-		return true
 	}
+	if ok := userProfile.MatchUsernameAndPassword(lr.UserName, lr.Password); !ok {
+		return false
+	}
+	return true
+
 }
 
 func (ol OperationLogin) GetToken(lr LoginRequest) (string, error) {
@@ -45,7 +56,7 @@ func (ol OperationLogin) GetToken(lr LoginRequest) (string, error) {
 	if err != nil {
 		return "", errors.New("ERR_TOKEN_NOT_FOUND")
 	}
-	return userProfile.Password, nil
+	return userProfile.UserCredential.Token, nil
 }
 
 func (ol OperationLogin) ComposeReply(w http.ResponseWriter, lr LoginReply) {
