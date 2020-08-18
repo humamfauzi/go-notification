@@ -19,8 +19,12 @@ func main() {
 	log.Println("Init server")
 	router := mux.NewRouter()
 	router.Use(LoggerMiddleware)
+
 	router.HandleFunc("/", HomeHandler).Methods(http.MethodGet)
-	router.HandleFunc("/users/login", LoginHandler).Methods(http.MethodPost)
+
+	var ol OperationLogin
+	router.Handle("/users/login", ol).Methods(http.MethodPost)
+
 	server := &http.Server{
 		Handler:      router,
 		Addr:         "127.0.0.1:8000",
