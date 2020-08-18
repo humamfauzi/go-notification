@@ -25,6 +25,10 @@ func main() {
 	var ol OperationLogin
 	router.Handle("/users/login", ol).Methods(http.MethodPost)
 
+	router.Use(TokenCheckMiddleware)
+	var getUserProfile OperationGetUserProfile
+	router.Handle("/users/profile", getUserProfile).Methods(http.MethodGet)
+
 	server := &http.Server{
 		Handler:      router,
 		Addr:         "127.0.0.1:8000",

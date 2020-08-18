@@ -6,10 +6,17 @@ type InMemory struct {
 	Members []UserProfile
 }
 
-func (im InMemory) Get(userName string) (UserProfile, error) {
+func (im InMemory) Get(column, search string) (UserProfile, error) {
 	for _, user := range im.Members {
-		if user.UserDetail.Username == userName {
-			return user, nil
+		switch column {
+		case "username":
+			if user.UserDetail.Username == search {
+				return user, nil
+			}
+		case "token":
+			if user.UserCredential.Token == search {
+				return user, nil
+			}
 		}
 	}
 	return UserProfile{}, errors.New("USER_NOT_FOUND")
@@ -27,6 +34,7 @@ func CreateInMemoryStorage() Storage {
 				UserCredential{
 					UserId:   "1",
 					Password: "AXZ098",
+					Token:    "BSD",
 				},
 			},
 			UserProfile{
@@ -46,7 +54,7 @@ func CreateInMemoryStorage() Storage {
 }
 
 type Storage interface {
-	Get(string) (UserProfile, error)
+	Get(string, string) (UserProfile, error)
 }
 
 func InitStorage() (Storage, error) {
