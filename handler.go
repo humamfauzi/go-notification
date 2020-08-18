@@ -17,7 +17,7 @@ type LoginRequest struct {
 }
 
 type LoginReply struct {
-	Code    int
+	Code    int    `json:"code"`
 	Success bool   `json:"success"`
 	Token   string `json:"token"`
 }
@@ -45,7 +45,7 @@ func (ol OperationLogin) GetToken(lr LoginRequest) (string, error) {
 	if err != nil {
 		return "", errors.New("ERR_TOKEN_NOT_FOUND")
 	}
-	return *userProfile.Token, nil
+	return userProfile.Password, nil
 }
 
 func (ol OperationLogin) ComposeReply(w http.ResponseWriter, lr LoginReply) {
@@ -54,6 +54,7 @@ func (ol OperationLogin) ComposeReply(w http.ResponseWriter, lr LoginReply) {
 	w.Write(reply)
 	return
 }
+
 func (ol OperationLogin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	loginRequest := ol.InterpretRequest(r.Body)
 	if ok := ol.AuthenticateLogin(loginRequest); !ok {
@@ -88,53 +89,6 @@ func (ol OperationLogin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Token:   token,
 	})
 	return
-}
-
-type UserLogin struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Token    *string
-}
-
-func (ul *UserLogin) InterpretPayload(payload io.Reader) {
-	body, _ := ioutil.ReadAll(payload)
-	json.Unmarshal(body, ul)
-}
-
-func (ul UserLogin) AuthenticateLogin() bool {
-	_, err := storage.Get(ul.Username)
-	if err != nil {
-		return false
-	}
-	return true
-}
-
-func (ul *UserLogin) GenerateToken() {
-	user, err := storage.Get(ul.Username)
-	if err != nil {
-		ul.Token = nil
-	}
-	ul.Token = user.Token
-}
-
-func LoginHandler(w http.ResponseWriter, r *http.Request) {
-	loginProfile := UserLogin{}
-	loginProfile.InterpretPayload(r.Body)
-	if ok := loginProfile.AuthenticateLogin(); !ok {
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
-
-	loginProfile.GenerateToken()
-
-	loginReply := LoginReply{
-		Success: true,
-		Token:   *loginProfile.Token,
-	}
-
-	jsonReply, _ := json.Marshal(loginReply)
-	w.WriteHeader(http.StatusOK)
-	w.Write(jsonReply)
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {

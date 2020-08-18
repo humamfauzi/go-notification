@@ -3,32 +3,30 @@ package main
 import "errors"
 
 type InMemory struct {
-	Members []UserLogin
+	Members []LoginRequest
 }
 
-func (im InMemory) Get(userName string) (UserLogin, error) {
+func (im InMemory) Get(userName string) (LoginRequest, error) {
 	for _, user := range im.Members {
-		if user.Username == userName {
+		if user.UserName == userName {
 			return user, nil
 		}
 	}
-	return UserLogin{}, errors.New("USER_NOT_FOUND")
+	return LoginRequest{}, errors.New("USER_NOT_FOUND")
 }
 
 func CreateInMemoryStorage() Storage {
-	token1 := "HEHE123"
-	token2 := "1253NNMK"
 	newStorage := InMemory{
-		Members: []UserLogin{
-			UserLogin{
-				Username: "Hello123",
-				Password: "AXZ098",
-				Token:    &token1,
+		Members: []LoginRequest{
+			LoginRequest{
+				UserName:    "Hello123",
+				Password:    "AXZ098",
+				PhoneNumber: "6456546564",
 			},
-			UserLogin{
-				Username: "Bye456",
-				Password: "IOP678",
-				Token:    &token2,
+			LoginRequest{
+				UserName:    "Bye456",
+				Password:    "IOP678",
+				PhoneNumber: "7987632156",
 			},
 		},
 	}
@@ -36,7 +34,7 @@ func CreateInMemoryStorage() Storage {
 }
 
 type Storage interface {
-	Get(string) (UserLogin, error)
+	Get(string) (LoginRequest, error)
 }
 
 func InitStorage() (Storage, error) {
