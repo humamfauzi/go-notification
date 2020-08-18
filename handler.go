@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -9,9 +10,84 @@ import (
 	"net/http"
 )
 
+type LoginRequest struct {
+	UserName    string `json:"username"`
+	Password    string `json:"password"`
+	PhoneNumber string `json:"phone_number"`
+}
+
 type LoginReply struct {
+	Code    int
 	Success bool   `json:"success"`
 	Token   string `json:"token"`
+}
+
+type OperationLogin struct{}
+
+func (ol OperationLogin) InterpretRequest(payload io.Reader) LoginRequest {
+	body, _ := ioutil.ReadAll(payload)
+	var loginRequest = LoginRequest{}
+	json.Unmarshal(body, &loginRequest)
+	return loginRequest
+}
+
+func (ol OperationLogin) AuthenticateLogin(lr LoginRequest) bool {
+	_, err := storage.Get(lr.UserName)
+	if err != nil {
+		return false
+	} else {
+		return true
+	}
+}
+
+func (ol OperationLogin) GetToken(lr LoginRequest) (string, error) {
+	userProfile, err := storage.Get(lr.UserName)
+	if err != nil {
+		return "", errors.New("ERR_TOKEN_NOT_FOUND")
+	}
+	return *userProfile.Token, nil
+}
+
+func (ol OperationLogin) ComposeReply(w http.ResponseWriter, lr LoginReply) {
+	w.WriteHeader(lr.Code)
+	reply, _ := json.Marshal(lr)
+	w.Write(reply)
+	return
+}
+func (ol OperationLogin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	loginRequest := ol.InterpretRequest(r.Body)
+	if ok := ol.AuthenticateLogin(loginRequest); !ok {
+		ol.ComposeReply(w, LoginReply{
+			Code:    http.StatusForbidden,
+			Success: false,
+			Token:   "",
+		})
+		return
+	}
+
+	token, err := ol.GetToken(loginRequest)
+	if err != nil {
+		ol.ComposeReply(w, LoginReply{
+			Code:    http.StatusForbidden,
+			Success: false,
+			Token:   "",
+		})
+		return
+	}
+	if err != nil {
+		ol.ComposeReply(w, LoginReply{
+			Code:    http.StatusInternalServerError,
+			Success: false,
+			Token:   "",
+		})
+		return
+	}
+	ol.ComposeReply(w, LoginReply{
+		Code:    http.StatusOK,
+		Success: true,
+		Token:   token,
+	})
+	return
 }
 
 type UserLogin struct {
