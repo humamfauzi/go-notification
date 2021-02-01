@@ -1,0 +1,10 @@
+{
+  "string": "astring",
+  "number": 1000,
+  "float": 123.321,
+  "boolean": false,
+  "array": ["asdf", 123, false],
+  "nested": {
+    "string": "astring"
+  }
+}
