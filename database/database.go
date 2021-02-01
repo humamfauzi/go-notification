@@ -45,11 +45,13 @@ type UserProfile struct {
 
 func GetUser(userId string) (UserProfile, error) {
 	var userProfile UserProfile
-	err := db.QueryRow("SELECT id, email FROM users WHERE id=?", userId).Scan(&userProfile.Id, &userProfile.Email)
-	if err != nil {
+	row := db.QueryRow("SELECT id, email FROM users WHERE id=?", userId)
+	switch err := row.Scan(&userProfile.Id, &userProfile.Email); err {
+	case nil:
+		return userProfile, nil
+	default:
 		return userProfile, err
 	}
-	return userProfile, nil
 }
 
 func InsertUserEmailAndId(userProfile UserProfile) bool {
@@ -67,6 +69,15 @@ func UpdateUserEmail(userProfile UserProfile) bool {
 		return false
 	}
 	update.Close()
+	return true
+}
+
+func DeleteUser(userProfile UserProfile) bool {
+	delete, err := db.Query("DELETE FROM users WHERE id = ?", userProfile.Id) 
+	if err != nil {
+		return false
+	}
+	delete.Close()
 	return true
 }
 

@@ -2,6 +2,7 @@ package database
 
 import (
 	"testing"
+	"database/sql"
 )
 
 func TestConnectionDatabase(t *testing.T) {
@@ -73,4 +74,21 @@ func TestUpdateUserEmail(t *testing.T) {
 	if userProfile.Email != result.Email {
 		t.Fatalf("Want %v yield %v", userProfile.Email, result.Email)
 	}
+}
+
+func TestDeleteUser(t *testing.T) {
+	userId := "user/2021/dsa93d/s2se"
+	userProfile := UserProfile{
+		Id: userId,
+	}
+	if ok := DeleteUser(userProfile); !ok {
+		t.Fatalf("Failed to delete")
+	}
+	result, err := GetUser(userId)
+	if err != sql.ErrNoRows {
+		t.Fatalf("Failed to get user profile %v", err)
+	}
+	if result.Id != "" {
+		t.Fatalf("Should be empty")
+	} 
 }
