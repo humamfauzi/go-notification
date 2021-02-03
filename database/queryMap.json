@@ -1,0 +1,61 @@
+{
+  "init": {
+    "users": [
+      "CREATE TABLE users (",
+      "id VARCHAR(255) NOT NULL",
+      "email VARCHAR(255)"
+    ],
+    "topics": [
+      "CREATE TABLE topics (",
+      "id INT NOT NULL AUTO_INCREMENT",
+      "user_id VARCHAR(255) NOT NULL",
+      "title VARCHAR(255)",
+      "description VARCHAR(255)",
+      "PRIMARY KEY (id)",
+      "FOREIGN KEY (user_id) REFERENCES users(id)",
+      ");"
+    ],
+    "sucribers": [
+      "CREATE TABLE subscribers (",
+        "id INT NOT NULL AUTO_INCREMENT",
+        "topic_id int NOT NULL",
+        "user_id VARCHAR(255) NOT NULL",
+        "PRIMARY KEY (id)",
+        "FOREIGN KEY (topic_id) REFERENCES topics(id)",
+        "FOREIGN KEY (user_id) REFERENCES users(id)",
+      ");"
+    ],
+    "notifications": [
+      "CREATE TABLE notifications (",
+        "id INT NOT NULL AUTO_INCREMENT",
+        "user_id VARCHAR(255) not null",
+        "topic_id int not null REFERENCES topics(id)",
+        "message text",
+        "is_read tinyint",
+        "PRIMARY KEY (id)",
+        "FOREIGN KEY (user_id) REFERENCES users(id)",
+        "FOREIGN KEY (topic_id) REFERENCES topics(id)",
+      ");"
+    ]
+  },
+  "users": {
+    "create": "INSERT INTO users (id, email) VALUES %s",
+    "get": "SELECT %s FROM users %s",
+    "update": "UPDATE users SET email = %s WHERE id = '%s'",
+    "delete": "DELETE FROM users WHERE id = %s",
+    "find": "SELECT %s FROM users WHERE %s"
+  },
+  "topic": {
+    "insert": "INSERT INTO topics (user_id, title, description) VALUES %s"
+  },
+  "subcriber": {
+    "create": "INSERT INTO subscribers (topic_id, user_id) VALUES %s",
+    "delete": "DELETE FROM subscribers WHERE id = %s"
+  },
+  "notification": {
+    "get": "SELECT %s FROM notifications %s",
+    "bulkInsertNotification": "INSERT INTO notifications (user_id, topic_id, message) VALUES %s",
+    "insertNotification": "INSERT INTO notifications (user_id, topic_id, message) VALUES (%s, %d, %s)",
+    "updateReadNotification": "UPDATE notifications SET is_read = true WHERE id IN %s"
+  }
+}
