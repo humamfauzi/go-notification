@@ -9,12 +9,12 @@ import (
 	"strings"
 	"strconv"
 	"errors"
-	"context"
 )
 
 var (
 	queryMap QueryMap
 )
+
 
 type QueryMap map[string]map[string]interface{}
 
@@ -35,7 +35,7 @@ type MysqlDatabaseAccess struct {
 	DBName string
 }
 
-func (mda MysqlDatabaseAccess) ConnectDatabase() (*sql.DB, error) {
+func (mda MysqlDatabaseAccess) ConnectDatabase() (ITransactionSQL, error) {
 	composed := mda.Username + ":"
 	composed += mda.Password + "@"
 	composed += mda.Protocol + "("
@@ -53,9 +53,16 @@ type ITransaction interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
 }
 
-func CreateTransaction(dbFunction func(tx *sql.Tx) error) error {
-	ctx := context.Background()
-	tx, err := db.BeginTx(ctx, nil)
+type ITransactionSQL interface {
+	Begin() (*sql.Tx, error)
+	Ping() error
+	Close() error
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	Exec(query string, args ...interface{}) (sql.Result, error)
+}
+
+func CreateSQLTransaction(dbEngine ITransactionSQL, dbFunction func(tx *sql.Tx) error) error {
+	tx, err := dbEngine.Begin()
 	if err != nil {
 		return err
 	}
@@ -175,8 +182,8 @@ func ReadFromDB(tx ITransaction, path string, selectionInterface ...interface{})
 	return rows, nil
 }
 
-func CloseConnection() {
-	db.Close()
+func CloseConnection(dbEngine ITransactionSQL) {
+	dbEngine.Close()
 }
 
 // ------- USER MODEL FUNCTION --------- //
@@ -366,7 +373,6 @@ func (t *Topics) Get(tx ITransaction) error {
 	if err := t.Scan(rows); err != nil {
 		return err
 	}
-	fmt.Println(t)
 	return nil
 }
 
