@@ -6,10 +6,14 @@ import (
 	"reflect"
 )
 
+var (
+	db *sql.DB
+)
+
 func TestConvertJsonToQueryMap(t *testing.T) {
 	dir := "queryMap.json"
 	if err := ConvertJsonToQueryMap(dir); err != nil {
-		t.Fatalf("Failed to read query map")
+		t.Fatalf("Failed to read query map %v", err)
 	}
 	qm := make(QueryMap)
 	if reflect.TypeOf(queryMap) != reflect.TypeOf(qm) {
@@ -58,14 +62,15 @@ func TestInsertUserEmailAndId(t *testing.T) {
 		Id: userId,
 		Email: email,
 	}
-	if err := userProfile.Insert(db); err != nil {
+	_, err := userProfile.Insert(db); 
+	if err != nil {
 		t.Fatalf("Failed to Insert User %v", err)
 	}
 
 	newUserProfile := UserProfile{
 		Id: userId,
 	}
-	if err := newUserProfile.Get(db); err != nil {
+	if err = newUserProfile.Get(db); err != nil {
 		t.Fatalf("Failed to get user profile %v", err)
 	}
 	if userProfile.Email != newUserProfile.Email {
@@ -80,13 +85,14 @@ func TestUpdateUserEmail(t *testing.T) {
 		Email: email,
 		Id: userId,
 	}
-	if err := userProfile.Update(db); err != nil {
+	_, err := userProfile.Update(db) 
+	if err != nil {
 		t.Fatalf("Failed to udpate %v", err)
 	}
 	newUserProfile := UserProfile{
 		Id: userId,
 	}
-	err := newUserProfile.Get(db)
+	err = newUserProfile.Get(db)
 	if err != nil {
 		t.Fatalf("Failed to get user profile %v", err)
 	}
@@ -100,13 +106,14 @@ func TestDeleteUser(t *testing.T) {
 	userProfile := UserProfile{
 		Id: userId,
 	}
-	if err := userProfile.Delete(db); err != nil {
+	_, err := userProfile.Delete(db); 
+	if err != nil {
 		t.Fatalf("Failed to delete %v", err)
 	}
 	newUserProfile := UserProfile{
 		Id: userId,
 	}
-	err := newUserProfile.Get(db)
+	err = newUserProfile.Get(db)
 	if err != sql.ErrNoRows {
 		t.Fatalf("Failed to get user profile %v", err)
 	}
@@ -142,6 +149,39 @@ func TestBulkFormat(t *testing.T) {
 	}
 }
 
+func TestGetTopics(t *testing.T) {
+	userId := "user/topic"
+	userProfile := UserProfile{
+		Id: userId,
+		Email: "Topics@top.ics",
+	}
+	if _, err := userProfile.Insert(db); err != nil  {
+		t.Logf("Failed to create user %v", err)
+	}
+	topics := Topics{
+		Topic{
+			UserId: userId,
+			Title: "topic1",
+		},
+		Topic{
+			UserId: userId,
+			Title: "topic2",
+		},
+	}
+	if _, err := topics.Insert(db); err != nil {
+		t.Fatalf("Cannot insert topics %v", err)
+	}
+
+	getTopics := Topics{}
+	if err := getTopics.Get(db); err != nil {
+		t.Fatalf("Cannot get topics %v", err)
+	}
+
+	if len(getTopics) != 2 {
+		t.Fatalf("topics len should equal to %d, %v", 2, getTopics)
+	}
+}
+
 func TestUpdateNotificationIsRead(t *testing.T) {
 	user1 := UserProfile{
 		Id: "user/1",
@@ -156,6 +196,7 @@ func TestUpdateNotificationIsRead(t *testing.T) {
 		Email: "aaaa@gmz.com",
 	}
 	topic := Topic{
+		Id: 1,
 		UserId: "user/3",
 		Title: "Hello",
 		Desc: "try1",
@@ -175,23 +216,36 @@ func TestUpdateNotificationIsRead(t *testing.T) {
 		},
 	}
 	if err := CreateTransaction(func(tx *sql.Tx) error {
-
-		if err := user1.Delete(tx); err != nil {
+		_, err := insertArray.Delete(tx)
+		if err != nil {
 			return err
 		}
-		if err := user2.Delete(tx); err != nil {
+		_, err = topic.Delete(tx)
+		if err != nil {
 			return err
 		}
-		if err := user3.Delete(tx); err != nil {
+		_, err = user1.Delete(tx)
+		if err != nil {
 			return err
 		}
-		if err := user1.Insert(tx); err != nil {
+		_, err = user2.Delete(tx)
+		if err != nil {
 			return err
 		}
-		if err := user2.Insert(tx); err != nil {
+		_, err = user3.Delete(tx)
+		if err != nil {
 			return err
 		}
-		if err := user3.Insert(tx); err != nil {
+	_, err = user1.Insert(tx)
+		if err != nil {
+			return err
+		}
+		_, err = user2.Insert(tx)
+		if err != nil {
+			return err
+		}
+		_, err = user3.Insert(tx)
+		if err != nil {
 			return err
 		}
 		return nil
@@ -200,14 +254,14 @@ func TestUpdateNotificationIsRead(t *testing.T) {
 	}
 
 	
-	if err := topic.Insert(db); err != nil {
+	if _, err := topic.Insert(db); err != nil {
 		t.Fatalf("%v", err)
 	}
-	if err := insertArray.Insert(db); err != nil {
+	if _, err := insertArray.Insert(db); err != nil {
 		t.Fatalf("%v", err)
 	}
 	
-	if err := insertArray.UpdateReadNotification(db); err != nil {
+	if _, err := insertArray.UpdateReadNotification(db); err != nil {
 		t.Fatalf("Failed to update notification")
 	}
 	note := Notification{

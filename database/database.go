@@ -13,7 +13,6 @@ import (
 )
 
 var (
-	db *sql.DB
 	queryMap QueryMap
 )
 
@@ -51,6 +50,7 @@ func (mda MysqlDatabaseAccess) ConnectDatabase() (*sql.DB, error) {
 
 type ITransaction interface {
 	Query(query string, args ...interface{}) (*sql.Rows, error)
+	Exec(query string, args ...interface{}) (sql.Result, error)
 }
 
 func CreateTransaction(dbFunction func(tx *sql.Tx) error) error {
@@ -84,18 +84,22 @@ func ConvertJsonToQueryMap(dir string) error {
 	return nil
 }
 
-func WriteToDB(tx ITransaction, path string, input ...interface{}) error {
+func WriteToDB(tx ITransaction, path string, input ...interface{}) (int64, error) {
 	query, err := Query(path, input...)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	fmt.Println(query)
-	write, err := tx.Query(query)
+	write, err := tx.Exec(query)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	write.Close()
-	return nil
+	lastInsertId, err := write.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+
+	return lastInsertId, nil
 }
 
 func Query(path string, input ...interface{}) (string, error) {
@@ -105,6 +109,16 @@ func Query(path string, input ...interface{}) (string, error) {
 	}
 	return fmt.Sprintf(formatQuery, input...), nil
 }
+func createAfterWherePair(pairs [][]string) string {
+	if len(pairs) == 0 {
+		return ""
+	}
+	finalQuery := ""
+	for i := 0; i < len(pairs); i++ {
+		finalQuery += fmt.Sprintf(" %s %s ", pairs[i][0], pairs[i][1])
+	}
+	return finalQuery
+}
 
 func createColumnValuePairing(pairs [][]string) string {
 	if len(pairs) == 0 {
@@ -113,17 +127,42 @@ func createColumnValuePairing(pairs [][]string) string {
 	finalQuery := " WHERE "
 	for i := 0; i < len(pairs); i++ {
 		if len(pairs[i]) == 1 {
+			// for an or, and, parentheses
 			finalQuery += fmt.Sprintf(" %s ", pairs[i])
 		} else if len(pairs[i]) == 3 {
+			// for a condilitionals e.g '=', '!=', 'is not null'
 			finalQuery += fmt.Sprintf(" %s %s '%s' ", pairs[i][0], pairs[i][1], pairs[i][2])
 		}
 	}
 	return finalQuery
 }
 
-func ReadFromDB(tx ITransaction, path string, selectColumn []string, whereColumn [][]string) (RowsScan, error) {
+/**
+	Create an interface after path, currently can be inserted with
+	selectColumn []string, whereColumn [][]string, afterWhere[][]string
+	must be inserted in that order
+*/
+func ReadFromDB(tx ITransaction, path string, selectionInterface ...interface{}) (RowsScan, error) {
+	var selectColumn []string
+	var whereColumn, afterWhere [][]string
+	switch len(selectionInterface) {
+	case 1:
+		selectColumn = selectionInterface[0].([]string)
+	case 2:
+		selectColumn = selectionInterface[0].([]string)
+		whereColumn = selectionInterface[1].([][]string)
+	case 3:
+		selectColumn = selectionInterface[0].([]string)
+		whereColumn = selectionInterface[1].([][]string)
+		afterWhere = selectionInterface[2].([][]string)
+	default:
+		return &sql.Rows{}, errors.New("Query Requires Filter")
+
+	}
 	column := strings.Join(selectColumn, ",")
 	whereQuery := createColumnValuePairing(whereColumn)
+	afterWhereQuery := createAfterWherePair(afterWhere)
+	whereQuery += afterWhereQuery
 	query, err := Query(path, column, whereQuery)
 	fmt.Println(query)
 	if err != nil {
@@ -190,53 +229,58 @@ func (up UserProfile) InsertFormat() string {
 	return fmt.Sprintf("('%s','%s')", up.Id, up.Email)
 }
 
-func (up UserProfile) Insert(tx ITransaction) error {
+func (up UserProfile) Insert(tx ITransaction) (int64, error) {
 	path := "users.create"
-	if err := WriteToDB(tx, path, up.InsertFormat()); err != nil {
-		return err
+	lastInsertId, err := WriteToDB(tx, path, up.InsertFormat())
+	if err != nil {
+		return 0, err
 	}
-	return nil
+	return lastInsertId, nil
 }
 
 func (up UserProfile) UpdateFormat() string {
 	return fmt.Sprintf("'%s'", up.Email)
 }
 
-func (up UserProfile) Update(tx ITransaction) error {
+func (up UserProfile) Update(tx ITransaction) (int64, error) {
 	path := "users.update"
-	if err := WriteToDB(tx, path, up.UpdateFormat(), up.Id); err != nil {
-		return err
+	lastInsertId, err := WriteToDB(tx, path, up.UpdateFormat(), up.Id)
+	if err != nil {
+		return 0, err
 	}
-	return nil
+	return lastInsertId, nil
 }
 
 func (up UserProfile) DeleteFormat() string {
 	return fmt.Sprintf("'%s'", up.Id)
 }
 
-func (up UserProfile) Delete(tx ITransaction) error {
+func (up UserProfile) Delete(tx ITransaction) (int64, error) {
 	path := "users.delete"
-	if err := WriteToDB(tx, path, up.DeleteFormat()); err != nil {
-		return err
+	lastInsertId, err := WriteToDB(tx, path, up.DeleteFormat())
+	if err != nil {
+		return 0, err
 	}
-	return nil
+	return lastInsertId, nil
 }
 
 type UserProfiles []UserProfile
 
-func (up UserProfiles) BulkCreate(tx ITransaction) error {
+func (up UserProfiles) BulkInsert(tx ITransaction) (int64, error) {
+	var lastInsertId int64
+	lastInsertId = 0
 	for i:=0; i < len(up); i++ {
-		err := up[i].Insert(tx)
+		lastInsertId, err := up[i].Insert(tx)
 		if err != nil {
-			return err
+			return lastInsertId, err
 		}
 	}
-	return nil
+	return lastInsertId, nil
 }
 
 func (up UserProfiles) BulkDelete(tx ITransaction) error {
 	for i:=0; i < len(up); i++ {
-		err := up[i].Delete(tx)
+		_, err := up[i].Delete(tx)
 		if err != nil {
 			return err
 		}
@@ -256,30 +300,89 @@ func (t Topic) InsertFormat() string {
 	return fmt.Sprintf("('%s','%s','%s')", t.UserId, t.Title, t.Desc)
 }
 
-func (t Topic) Insert(tx ITransaction) error {
+func (t Topic) Insert(tx ITransaction) (int64, error) {
 	path := "topic.insert"
-	if err := WriteToDB(tx, path, t.InsertFormat()); err != nil {
-		return err
+	lastInsertId, err := WriteToDB(tx, path, t.InsertFormat())
+	if err != nil {
+		return 0, err
 	}
-	return nil
+	return lastInsertId, nil
 }
 
 func (t Topic) UpdateFormat() string {
 	return fmt.Sprintf("(%s,%s)", t.Title, t.Desc)
 }
 
-func (t Topic) Update(tx ITransaction) error {
+func (t Topic) Update(tx ITransaction) (int64, error) {
 	path := "topic.update"
-	if err := WriteToDB(tx, path, t.UpdateFormat); err != nil {
+	lastInsertId, err := WriteToDB(tx, path, t.UpdateFormat)
+	if err != nil {
+		return 0, err
+	}
+	return lastInsertId, nil
+}
+
+func (t Topic) Delete(tx ITransaction) (int64, error) {
+	path := "topic.delete"
+	lastInsertId, err := WriteToDB(tx, path, t.Id)
+	if err != nil {
+		return 0, err
+	}
+	return lastInsertId, nil
+}
+
+type Topics []Topic
+
+func (t Topics) InsertFormat() string {
+	finalQuery := make([]string, len(t))
+	for i:=0; i < len(t); i++ {
+		finalQuery[i] = t[i].InsertFormat()
+	}
+	return strings.Join(finalQuery, ",")
+}
+
+func (t Topics) Insert(tx ITransaction) (int64, error) {
+	path := "topics.insert"
+	lastInsertId, err := WriteToDB(tx, path, t.InsertFormat())
+	if err != nil {
+		return int64(0), err
+	}
+	return lastInsertId, nil
+}
+
+func (t *Topics) Get(tx ITransaction) error {
+	path := "topics.get"
+	selectColumn := []string{"id", "user_id", "title", "description"}
+	wherePairs := [][]string{}
+	afterWhere := [][]string{
+		[]string{
+			"limit", "10",
+		},
+	}
+	rows, err := ReadFromDB(tx, path, selectColumn, wherePairs, afterWhere)
+	if err != nil {
 		return err
 	}
+	if err := t.Scan(rows); err != nil {
+		return err
+	}
+	fmt.Println(t)
 	return nil
 }
 
-func (t Topic) Delete(tx ITransaction) error {
-	path := "topic.delete"
-	if err := WriteToDB(tx, path, t.Id); err != nil {
-		return err
+func (t *Topics) Scan(rows RowsScan) error {
+	defer rows.Close()
+	count := 0
+	for rows.Next() {
+		tb := Topic{}
+		if err := rows.Scan(&tb.Id, &tb.UserId, &tb.Title, &tb.Desc); err != nil {
+			return err
+		}
+		(*t) = append(*t, tb)
+		count++
+	}
+	if count == 0 {
+		return sql.ErrNoRows
 	}
 	return nil
 }
@@ -290,28 +393,30 @@ type Subscriber struct {
 	TopicId int
 	UserId string
 }
-func (s Subscriber) CreateFormat() string {
+func (s Subscriber) InsertFormat() string {
 	return fmt.Sprintf("(%d,%s)", s.TopicId, s.UserId)
 }
 
-func (s Subscriber) Create(tx ITransaction) error {
+func (s Subscriber) Insert(tx ITransaction) (int64, error) {
 	path:= "subscriber.create"
-	if err := WriteToDB(tx, path, s.CreateFormat()); err != nil {
-		return err
+	lastInsertId, err := WriteToDB(tx, path, s.InsertFormat())
+	if err != nil {
+		return 0, err
 	}
-	return nil
+	return lastInsertId, nil
 }
 
 func (s Subscriber) DeleteFormat() string {
 	return fmt.Sprintf("%d", s.Id)
 }
 
-func (s Subscriber) Delete(tx ITransaction) error {
+func (s Subscriber) Delete(tx ITransaction) (int64, error) {
 	path := "subscriber.delete"
-	if err := WriteToDB(tx, path, s.DeleteFormat()); err != nil {
-		return err
+	lastInsertId, err := WriteToDB(tx, path, s.DeleteFormat())
+	if err != nil {
+		return 0, err
 	}
-	return nil
+	return lastInsertId, nil
 }
 
 // -------- NOTIFICATION MODEL FUNCTION --------- //
@@ -327,12 +432,13 @@ func (n Notification) InsertFormat() string {
 	return fmt.Sprintf("('%s',%d,'%s')", n.UserId, n.TopicId, n.Message)
 }
 
-func (n Notification) Insert(tx ITransaction) error {
+func (n Notification) Insert(tx ITransaction) (int64, error) {
 	path := "notification.insertNotification"
-	if err := WriteToDB(tx, path, n.InsertFormat()); err != nil {
-		return err
+	lastInsertId, err := WriteToDB(tx, path, n.InsertFormat())
+	if err != nil {
+		return 0, err
 	}
-	return nil
+	return lastInsertId, nil
 }
 
 func (n *Notification) Get(tx ITransaction) error {
@@ -378,12 +484,13 @@ func (n Notifications) InsertFormat() string {
 	return strings.Join(finalQuery, ",")
 }
 
-func (n Notifications) Insert(tx ITransaction) error {
+func (n Notifications) Insert(tx ITransaction) (int64, error) {
 	path := "notification.bulkInsertNotification"
-	if err := WriteToDB(tx, path, n.InsertFormat()); err != nil {
-		return err
+	lastInsertId, err := WriteToDB(tx, path, n.InsertFormat())
+	if err != nil {
+		return 0, err
 	}
-	return nil
+	return lastInsertId, nil
 }
 
 func (n Notifications) ComposeInputBulkFormat() string {
@@ -403,10 +510,20 @@ func (n Notifications) ComposeIdBulkFormat() string {
 	return "(" + strings.Join(finalFormat, ",") + ")"
 }
 
-func (n Notifications) UpdateReadNotification(tx ITransaction) error {
-	path := "notification.updateReadNotification"
-	if err := WriteToDB(tx, path, n.ComposeIdBulkFormat()); err != nil {
-		return err
+func (n Notifications) UpdateReadNotification(tx ITransaction) (int64, error) {
+	path := "notifications.updateRead"
+	lastInsertId, err := WriteToDB(tx, path, n.ComposeIdBulkFormat())
+	if err != nil {
+		return 0, err
 	}
-	return nil
+	return lastInsertId, nil
+}
+
+func (n Notifications) Delete(tx ITransaction) (int64, error) {
+	path := "notifications.delete"
+	lastInsertId, err := WriteToDB(tx, path, n.ComposeIdBulkFormat())
+	if err != nil {
+		return 0, err
+	}
+	return lastInsertId, nil
 }
