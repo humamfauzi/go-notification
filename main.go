@@ -3,31 +3,50 @@ package main
 import (
 	"log"
 	"net/http"
-	"time"
+	// "time"
 
 	"github.com/gorilla/mux"
+	dba "github.com/humamfauzi/go-notification/database"
+	"github.com/humamfauzi/go-notification/handler"
 )
 
-var storage Storage
-var err error
+const (
+	queryMapDir = "database/queryMap.json"
+)
 
 func main() {
-	storage, err = InitStorage()
+	connProp := dba.MysqlDatabaseAccess{
+		Username: "root",
+		Password: "",
+		Protocol: "tcp",
+		Address: "localhost",
+		DBName: "try1",
+	}
+	connDB, err := connProp.ConnectDatabase()
 	if err != nil {
 		panic(err)
 	}
+	defer connDB.Close()
+	if err := dba.ConvertJsonToQueryMap(queryMapDir); err != nil {
+		panic("Failed to read query map")
+	}
+	log.Println("OK")
+	
 	log.Println("Init server")
 	router := mux.NewRouter()
 	router.Use(LoggerMiddleware)
 
-	router.HandleFunc("/", HomeHandler).Methods(http.MethodGet)
+	router.HandleFunc("/user/create", CreateUserHandler).Methods(http.MethodPost)
+	router.HandleFunc("/user/{id}", UpdateUserHandler).Methods(http.MethodPut)
+	router.HandleFunc("/user/{id}", DeleteUserHandler).Methods(http.MethodDelete)
 
-	var ol OperationLogin
-	router.Handle("/users/login", ol).Methods(http.MethodPost)
+	router.HandleFunc("/topic/create", CreateTopicHandler).Methods(http.MethodPost)
+	router.HandleFunc("/topic", GetTopicHandler).Methods(http.MethodsGet)
+	router.HandleFunc("/subscribe/{id_topic}", CreateSubscribeHandler).Methods(http.MethodPost)
 
-	router.Use(TokenCheckMiddleware)
-	var getUserProfile OperationGetUserProfile
-	router.Handle("/users/profile", getUserProfile).Methods(http.MethodGet)
+	router.HandleFunc("/notification/{id_topic}", CreateNotificationHandler).Methods(http.MethodPost)
+	router.HandleFunc("/notification", GetNotificationHandler).Methods(http.MethodGet)
+
 
 	server := &http.Server{
 		Handler:      router,
