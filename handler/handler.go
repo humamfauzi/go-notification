@@ -13,6 +13,7 @@ import (
 
 	dba "github.com/humamfauzi/go-notification/database"
 	"github.com/humamfauzi/go-notification/utils"
+	"github.com/humamfauzi/go-notification/auth"
 )
 
 const (
@@ -101,12 +102,75 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 		WriteReply(int(http.StatusBadRequest), false, "Cannot Parse Payload", w)
 		return
 	}
-	userProfile.Id = utils.RandomStringId("user1", 10)
+	
+	storedPassword, err := auth.BcryptConvertTo(dba.Email, dba.Password)
+	if err != nil {
+		WriteReply(int(http.StatusInternalServerError), false, "Cannot use auth conversion", w)
+		return
+	}
+
+	userProfile.Id = utils.RandomStringId("user", 10)
+	userProfile.Password = storedPassword
 	if _, err := userProfile.Insert(dbConn); err != nil {
 		WriteReply(int(http.StatusBadRequest), false, fmt.Sprintf("Cannot Write Payload %v", err), w)
 		return
 	}
 	WriteReply(int(http.StatusOK), true, nil, w)
+	return
+}
+
+type LoginOps struct {}
+
+func (lo LoginOps) searchUserByEmailAndReturnPassword(email, password string) error {
+	profileFromDB := dba.UserProfile{}
+	selectCols := []string{"id", "email", "password"}
+	wherePairs := [][]string{
+		[]string{
+			"email", "=", email,
+		},
+	}
+	if err := profileFromDB.Find(dbConn, selectCols, wherePairs); err != nil {
+		return err
+	}
+	storedPassword := auth.ComposeBcryptPassword(email, password)
+	if err := auth.BcryptCheck([]byte(profileFromDB.Password), password); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (lo LoginOps) generateToken() (string, error) {
+	mapClaims := make(map[string]interface{})
+	mapClaims["exp"] = time.Now().Add(time.Minute * 15).Unix()
+	return auth.CreateToken(mapClaims, handlerSecret)
+}
+
+func (lo LoginOps) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		WriteReply(int(http.StatusBadRequest), false, "Cannot Read Payload", w)
+		return
+	}
+
+	userProfile := dba.UserProfile()
+	if err := json.Unmarshal(body, &userProfile); err != nil {
+		WriteReply(int(http.StatusBadRequest), false, "Cannot Parse Payload", w)
+		return
+	}
+	if err :=lo.searchUserByEmailAndReturnPassword(userProfile.Email, userProfile.Password); err != nil {
+		WriteReply(int(http.StatusBadRequest), false, "Wrong password", w)
+		return
+	}
+
+	token, err := lo.generateToken()
+	if err != nil {
+		WriteReply(int(http.StatusBadRequest), false, "Token Generation Error", w)
+		return
+	}
+	reply := struct {
+		Token string `json:"token"`
+	}{ token }
+	WriteReply(int(http.StatusOK), true, reply, w)
 	return
 }
 
