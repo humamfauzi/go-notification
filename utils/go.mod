@@ -1,3 +1,3 @@
-module github.com/humamfauzi/utils
+module github.com/humamfauzi/go-notification/utils
 
 go 1.15
