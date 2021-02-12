@@ -126,8 +126,8 @@ func (lo LoginOps) searchUserByEmailAndReturnPassword(email, password string) er
 	selectCols := []string{"id", "email", "password"}
 	wherePairs := [][]string{
 		[]string{
-			"email", "=", email
-		}
+			"email", "=", email,
+		},
 	}
 	if err := profileFromDB.Find(dbConn, selectCols, wherePairs); err != nil {
 		return err
@@ -162,7 +162,7 @@ func (lo LoginOps) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err != lo.generateToken()
+	token, err := lo.generateToken()
 	if err != nil {
 		WriteReply(int(http.StatusBadRequest), false, "Token Generation Error", w)
 		return
