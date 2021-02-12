@@ -1,0 +1,9 @@
+github.com/go-sql-driver/mysql v1.5.0 h1:ozyZYNQW3x3HtqT1jira07DN2PArx2v7/mN66gGcHOs=
+github.com/go-sql-driver/mysql v1.5.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LBy8hT2VhHyBg=
+github.com/gorilla/mux v1.8.0 h1:i40aqfkR1h2SlN9hojwV5ZA91wcXFOvkdNIeFDP5koI=
+github.com/gorilla/mux v1.8.0/go.mod h1:DVbg23sWSpFRCP0SfiEN6jmj59UnW/n46BH5rLB71So=
+github.com/humamfauzi/go-notification v0.0.0-20210206024901-fa30402251ae h1:IhP6oYeiHlfBAoYNHEgjoyqElAFbbPgMfKaHYeHRBWA=
+github.com/humamfauzi/go-notification v0.0.0-20210206024901-fa30402251ae/go.mod h1:T8HziJMnVrciC/ZF/tqbAzPFwe+zf9O7YQwDLRrucCk=
+github.com/humamfauzi/go-notification/database v0.0.0-20210212140114-a0d0f90cb22d/go.mod h1:wMux9tq+VGwTW3BafMjKehQNo9mNhY64t05AcqgiCJE=
+github.com/humamfauzi/go-notification/utils v0.0.0-20210212142004-dd44a4e9354f h1:viDKP/UiwLbhJ0ZwMJUdhwMBoOUBrnC3YGMjYq3/Aks=
+github.com/humamfauzi/go-notification/utils v0.0.0-20210212142004-dd44a4e9354f/go.mod h1:Ij+iBPIBIGArmxmC+TFTU7DB5hGfifagm0EVS+bPTpo=
