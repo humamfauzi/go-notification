@@ -88,6 +88,10 @@ func TestLogin(t *testing.T) {
 	return
 }
 
+func TestCheckLogin(t *testing.T) {
+	
+}
+
 func TestUpdateUserHandler(t *testing.T) {
 	return
 }
