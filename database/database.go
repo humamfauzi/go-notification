@@ -223,10 +223,10 @@ func (up *UserProfile) Get(tx ITransaction) error {
 	return nil
 }
 
-func (up *UserProfile) Find(tx ITransaction, column []string, wherePairs[][]string) error {
+func (up *UserProfile) Find(tx ITransaction, selectColumn []string, wherePairs[][]string) error {
 	path := "users.find"
-	if len(column) == 0 {
-		column = []string{"*"}
+	if len(selectColumn) == 0 {
+		selectColumn = []string{"*"}
 	}
 	rows, err := ReadFromDB(tx, path, selectColumn, wherePairs)
 	if err != nil {
