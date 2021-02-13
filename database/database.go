@@ -200,7 +200,7 @@ type UserProfile struct {
 	Password string `json:"password"`
 }
 
-func (up UserProfile) toStringJSON() string {
+func (up UserProfile) ToStringJSON() string {
 	result, _ := json.Marshal(up)
 	return string(result)
 }
