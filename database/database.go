@@ -202,7 +202,7 @@ type UserProfile struct {
 
 func (up UserProfile) toStringJSON() string {
 	result, _ := json.Marshal(up)
-	result string(result)
+	return string(result)
 }
 
 func (up *UserProfile) Get(tx ITransaction) error {
