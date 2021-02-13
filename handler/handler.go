@@ -2,7 +2,7 @@ package handler
 
 import (
 	"encoding/json"
-	// "errors"
+	"errors"
 	"fmt"
 	"time"
 	"io/ioutil"
@@ -92,7 +92,7 @@ func TokenCheckMiddleware(next http.Handler) http.Handler {
 			WriteReply(int(http.StatusBadRequest), false, "Cannot find matched Token", w)
 			return
 		}
-		r.Header.Add("requesterProfile", userProfile.toStringJSON())
+		r.Header.Add("requesterProfile", userProfile.ToStringJSON())
 		next.ServeHTTP(w, r)
 	})
 }
@@ -166,7 +166,7 @@ func (lo LoginOps) searchUserByEmailAndReturnPassword(email, password string) er
 func (lo LoginOps) generateToken() (string, error) {
 	mapClaims := make(map[string]interface{})
 	mapClaims["exp"] = time.Now().Add(time.Minute * 15).Unix()
-	return auth.CreateToken(mapClaims, auth.Get)
+	return auth.CreateToken(mapClaims, auth.GetAuthSecret())
 }
 
 func (lo LoginOps) ServeHTTP(w http.ResponseWriter, r *http.Request) {

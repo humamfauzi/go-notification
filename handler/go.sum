@@ -8,6 +8,8 @@ github.com/humamfauzi/go-notification v0.0.0-20210206024901-fa30402251ae h1:IhP6
 github.com/humamfauzi/go-notification v0.0.0-20210206024901-fa30402251ae/go.mod h1:T8HziJMnVrciC/ZF/tqbAzPFwe+zf9O7YQwDLRrucCk=
 github.com/humamfauzi/go-notification v0.0.2 h1:OGIjW7NtV5V414QqPvsp7jIDwdWG+Z83Gn2BdymR4oQ=
 github.com/humamfauzi/go-notification v0.0.2/go.mod h1:T8HziJMnVrciC/ZF/tqbAzPFwe+zf9O7YQwDLRrucCk=
+github.com/humamfauzi/go-notification v0.0.5 h1:lOfOTBu9gGv5j2N+7yIRxyLVuumgvM3135+7zUTNz4U=
+github.com/humamfauzi/go-notification v0.0.5/go.mod h1:T8HziJMnVrciC/ZF/tqbAzPFwe+zf9O7YQwDLRrucCk=
 github.com/humamfauzi/go-notification/auth v0.0.0-20210213122405-5feed8abd13f h1:tvLar7JDfKFbHgD/ATjTsx2l6TAwz5UCvZE4OB42y2E=
 github.com/humamfauzi/go-notification/auth v0.0.0-20210213122405-5feed8abd13f/go.mod h1:iMLcgNukL5MDMk3tQyKbvb6XE6XQ/yMzJW+Bm19mAOM=
 github.com/humamfauzi/go-notification/database v0.0.0-20210213120657-a140707de45b h1:7zlKA/ePMrqnPWYQNih3hwiR01rgKb/0i85ZJByqPJI=
