@@ -68,7 +68,7 @@ func TestLogin(t *testing.T) {
 	req = httptest.NewRequest(http.MethodPost, baseUrl + "/users/login", jsonReader) 
 	w = httptest.NewRecorder()
 	loginOps := LoginOps{}
-	LoginOps.ServeHTTP(w, req)
+	loginOps.ServeHTTP(w, req)
 	
 	resp := w.Result()
 	body, _ := ioutil.ReadAll(resp.Body)

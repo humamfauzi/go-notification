@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	// "errors"
 	"fmt"
-	// "io"
+	"time"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -71,9 +71,9 @@ func getUserProfileFromAuth(authenticationToken string) (dba.UserProfile, error)
 		},
 	}
 	if err := userProfile.Find(dbConn, []string{}, wherePairs); err != nil {
-		return err
+		return userProfile, err
 	}
-	return userProfile
+	return userProfile, nil
 }
 
 func TokenCheckMiddleware(next http.Handler) http.Handler {
@@ -83,7 +83,7 @@ func TokenCheckMiddleware(next http.Handler) http.Handler {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
-		if ok := auth.VerifyToken(authenticationToken); !ok {
+		if ok := auth.VerifyToken(authenticationToken, auth.KeyFunction); !ok {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
@@ -127,7 +127,7 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	storedPassword, err := auth.BcryptConvertTo(dba.Email, dba.Password)
+	storedPassword, err := auth.BcryptConvertTo(userProfile.Email, userProfile.Password)
 	if err != nil {
 		WriteReply(int(http.StatusInternalServerError), false, "Cannot use auth conversion", w)
 		return
@@ -157,8 +157,8 @@ func (lo LoginOps) searchUserByEmailAndReturnPassword(email, password string) er
 		return err
 	}
 	storedPassword := auth.ComposeBcryptPassword(email, password)
-	if err := auth.BcryptCheck([]byte(profileFromDB.Password), password); err != nil {
-		return err
+	if ok := auth.BcryptCheck([]byte(profileFromDB.Password), []byte(password)); !ok {
+		return errors.New("Password Unmatched")
 	}
 	return nil
 }
@@ -166,7 +166,7 @@ func (lo LoginOps) searchUserByEmailAndReturnPassword(email, password string) er
 func (lo LoginOps) generateToken() (string, error) {
 	mapClaims := make(map[string]interface{})
 	mapClaims["exp"] = time.Now().Add(time.Minute * 15).Unix()
-	return auth.CreateToken(mapClaims, handlerSecret)
+	return auth.CreateToken(mapClaims, auth.Get)
 }
 
 func (lo LoginOps) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -176,7 +176,7 @@ func (lo LoginOps) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userProfile := dba.UserProfile()
+	userProfile := dba.UserProfile{}
 	if err := json.Unmarshal(body, &userProfile); err != nil {
 		WriteReply(int(http.StatusBadRequest), false, "Cannot Parse Payload", w)
 		return
@@ -206,7 +206,7 @@ func (cl CheckLogin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		WriteReply(int(http.StatusBadRequest), false, "Unknown Requester", w)
 		return
 	}
-	WriteReply(int(http.StatusOK, true, "Login Verfied", w))
+	WriteReply(int(http.StatusOK), true, "Login Verfied", w)
 }
 
 func UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
