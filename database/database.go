@@ -195,9 +195,14 @@ type RowsScan interface {
 
 // ------- USER MODEL FUNCTION --------- //
 type UserProfile struct {
-	Email string
-	Id string
-	Password string
+	Email string `json:"email"`
+	Id string `json:"id"`
+	Password string `json:"password"`
+}
+
+func (up UserProfile) toStringJSON() string {
+	result, _ := json.Marshal(up)
+	result string(result)
 }
 
 func (up *UserProfile) Get(tx ITransaction) error {
