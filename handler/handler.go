@@ -62,13 +62,37 @@ func LoggerMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+func getUserProfileFromAuth(authenticationToken string) (dba.UserProfile, error) {
+	token := auth.ParseBearer(authenticationToken)
+	userProfile := dba.UserProfile{}
+	wherePairs := [][]string{
+		[]string{
+			"token", "=", token,
+		},
+	}
+	if err := userProfile.Find(dbConn, []string{}, wherePairs); err != nil {
+		return err
+	}
+	return userProfile
+}
+
 func TokenCheckMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		auth := r.Header.Get("Authentication")
-		if len(auth) == 0 {
+		authenticationToken := r.Header.Get("Authentication")
+		if len(authenticationToken) == 0 {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
+		if ok := auth.VerifyToken(authenticationToken); !ok {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		userProfile, err := getUserProfileFromAuth(authenticationToken)
+		if err != nil {
+			WriteReply(int(http.StatusBadRequest), false, "Cannot find matched Token", w)
+			return
+		}
+		r.Header.Add("requesterProfile", userProfile.toStringJSON())
 		next.ServeHTTP(w, r)
 	})
 }
@@ -172,6 +196,17 @@ func (lo LoginOps) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}{ token }
 	WriteReply(int(http.StatusOK), true, reply, w)
 	return
+}
+
+type CheckLogin struct {}
+
+func (cl CheckLogin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	requester := r.Header.Get("requesterProfile")
+	if len(requester) == 0 {
+		WriteReply(int(http.StatusBadRequest), false, "Unknown Requester", w)
+		return
+	}
+	WriteReply(int(http.StatusOK, true, "Login Verfied", w))
 }
 
 func UpdateUserHandler(w http.ResponseWriter, r *http.Request) {

@@ -186,17 +186,23 @@ func CloseConnection(dbEngine ITransactionSQL) {
 	dbEngine.Close()
 }
 
-// ------- USER MODEL FUNCTION --------- //
-type UserProfile struct {
-	Email string
-	Id string
-}
-
 type RowsScan interface {
 	Next() bool
 	Scan(...interface{}) error
 	Close() error
 	Err() error
+}
+
+// ------- USER MODEL FUNCTION --------- //
+type UserProfile struct {
+	Email string `json:"email"`
+	Id string `json:"id"`
+	Password string `json:"password"`
+}
+
+func (up UserProfile) toStringJSON() string {
+	result, _ := json.Marshal(up)
+	result string(result)
 }
 
 func (up *UserProfile) Get(tx ITransaction) error {
@@ -217,6 +223,21 @@ func (up *UserProfile) Get(tx ITransaction) error {
 	return nil
 }
 
+func (up *UserProfile) Find(tx ITransaction, column []string, wherePairs[][]string) error {
+	path := "users.find"
+	if len(column) == 0 {
+		column = []string{"*"}
+	}
+	rows, err := ReadFromDB(tx, path, selectColumn, wherePairs)
+	if err != nil {
+		return err
+	}
+	if err := up.Scan(rows); err != nil {
+		return err
+	}
+	return nil
+}
+ 
 func (up *UserProfile) Scan(rows RowsScan) error {
 	defer rows.Close()
 	count := 0
