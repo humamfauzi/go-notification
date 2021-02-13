@@ -8,6 +8,17 @@ import (
 	"fmt"
 )
 
+const (
+	/**
+		Should outsorced to utils for security purpose but for now this would do
+	*/
+	AUTH_TOKEN_SECRET = "=kVsu2{G9'{'K<>d"
+)
+
+func getAuthSecret() []byte {
+	return []byte(AUTH_TOKEN_SECRET)
+}
+
 func CreateToken(mapClaims jwt.MapClaims, secret []byte) (string, error) {
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, mapClaims)
 	token, err := claims.SignedString(secret)
@@ -17,14 +28,14 @@ func CreateToken(mapClaims jwt.MapClaims, secret []byte) (string, error) {
 	return token, nil
 }
 
-func keyFunction(token *jwt.Token) (interface{}, error) {
+func KeyFunction(token *jwt.Token) (interface{}, error) {
 	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 		return nil, errors.New("asdlkj")
 	}
 	if ok := CheckTokenExpiry(token.Header["exp"]); !ok {
 		return nil, errors.New("Token Expired")
 	}
-	return "BABABB", nil
+	return getAuthSecret(), nil
 }
 
 func CheckTokenExpiry(expiry interface{}) bool {
