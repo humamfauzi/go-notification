@@ -15,7 +15,7 @@ const (
 	AUTH_TOKEN_SECRET = "=kVsu2{G9'{'K<>d"
 )
 
-func getAuthSecret() []byte {
+func GetAuthSecret() []byte {
 	return []byte(AUTH_TOKEN_SECRET)
 }
 
