@@ -35,7 +35,7 @@ func KeyFunction(token *jwt.Token) (interface{}, error) {
 	if ok := CheckTokenExpiry(token.Header["exp"]); !ok {
 		return nil, errors.New("Token Expired")
 	}
-	return getAuthSecret(), nil
+	return GetAuthSecret(), nil
 }
 
 func CheckTokenExpiry(expiry interface{}) bool {
