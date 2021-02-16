@@ -254,7 +254,7 @@ func (up *UserProfile) Scan(rows RowsScan) error {
 }
 
 func (up UserProfile) InsertFormat() string {
-	return fmt.Sprintf("('%s','%s')", up.Id, up.Email)
+	return fmt.Sprintf("('%s','%s', '%s')", up.Id, up.Email, up.Password)
 }
 
 func (up UserProfile) Insert(tx ITransaction) (int64, error) {

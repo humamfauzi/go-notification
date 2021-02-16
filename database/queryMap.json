@@ -39,7 +39,7 @@
     ]
   },
   "users": {
-    "create": "INSERT INTO users (id, email) VALUES %s",
+    "create": "INSERT INTO users (id, email, password) VALUES %s",
     "get": "SELECT %s FROM users %s",
     "update": "UPDATE users SET email = %s WHERE id = '%s'",
     "delete": "DELETE FROM users WHERE id = %s",
