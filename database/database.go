@@ -205,6 +205,27 @@ func (up UserProfile) ToStringJSON() string {
 	return string(result)
 }
 
+func (up *UserProfile) DynamicScan(selectColumn []string) []interface{} {
+	scanArray := make([]interface{}, len(selectColumn))
+	for index, v := range selectColumn {
+		scanArray[index] = up.ColumnMatcher(v)
+	}
+	return scanArray
+}
+
+func (up *UserProfile) ColumnMatcher(columnName string) interface{} {
+	switch columnName {
+	case "id":
+		return &up.Id
+	case "email":
+		return &up.Email
+	case "password":
+		return &up.Password
+	default:
+		return nil
+	}
+}
+
 func (up *UserProfile) Get(tx ITransaction) error {
 	path := "users.get"
 	selectColumn := []string{"email", "id"}
@@ -217,7 +238,7 @@ func (up *UserProfile) Get(tx ITransaction) error {
 	if err != nil {
 		return err
 	}
-	if err := up.Scan(rows); err != nil {
+	if err := up.Scan(rows, selectColumn); err != nil {
 		return err
 	}
 	return nil
@@ -232,17 +253,18 @@ func (up *UserProfile) Find(tx ITransaction, selectColumn []string, wherePairs[]
 	if err != nil {
 		return err
 	}
-	if err := up.Scan(rows); err != nil {
+	if err := up.Scan(rows, selectColumn); err != nil {
 		return err
 	}
 	return nil
 }
  
-func (up *UserProfile) Scan(rows RowsScan) error {
+func (up *UserProfile) Scan(rows RowsScan, selectRows []string) error {
 	defer rows.Close()
 	count := 0
+	scanArray := up.DynamicScan(selectRows)
 	for rows.Next(){	
-		if err := rows.Scan(&up.Email, &up.Id); err != nil {
+		if err := rows.Scan(scanArray...); err != nil {
 			return err
 		}
 		count++

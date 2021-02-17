@@ -43,7 +43,7 @@
     "get": "SELECT %s FROM users %s",
     "update": "UPDATE users SET email = %s WHERE id = '%s'",
     "delete": "DELETE FROM users WHERE id = %s",
-    "find": "SELECT %s FROM users WHERE %s"
+    "find": "SELECT %s FROM users %s"
   },
   "topic": {
     "insert": "INSERT INTO topics (user_id, title, description) VALUES %s",
