@@ -198,6 +198,7 @@ type UserProfile struct {
 	Email string `json:"email"`
 	Id string `json:"id"`
 	Password string `json:"password"`
+	Token string `json:"token"`
 }
 
 func (up UserProfile) ToStringJSON() string {
@@ -288,13 +289,27 @@ func (up UserProfile) Insert(tx ITransaction) (int64, error) {
 	return lastInsertId, nil
 }
 
-func (up UserProfile) UpdateFormat() string {
-	return fmt.Sprintf("'%s'", up.Email)
+func (up UserProfile) UpdateFormat(updateables []string) string {
+	baseQuery := ""
+	for _, column := range updateables {
+		switch column {
+		case "email":
+			baseQuery += fmt.Sprintf("email = '%s',", up.Email)
+		case "token":
+			baseQuery += fmt.Sprintf("token = '%s',", up.Token)
+		case "passowrd":
+			baseQuery += fmt.Sprintf("password = '%s',", up.Password)
+		default:
+			baseQuery += ""
+		}
+	}
+	baseQuery = strings.TrimSuffix(baseQuery, ",")
+	return baseQuery
 }
 
-func (up UserProfile) Update(tx ITransaction) (int64, error) {
+func (up UserProfile) Update(tx ITransaction, updateables []string) (int64, error) {
 	path := "users.update"
-	lastInsertId, err := WriteToDB(tx, path, up.UpdateFormat(), up.Id)
+	lastInsertId, err := WriteToDB(tx, path, up.UpdateFormat(updateables), up.Id)
 	if err != nil {
 		return 0, err
 	}

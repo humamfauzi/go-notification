@@ -70,7 +70,7 @@ func TestUpdateUserEmail(t *testing.T) {
 		Email: email,
 		Id: userId,
 	}
-	_, err := userProfile.Update(db) 
+	_, err := userProfile.Update(db, []string{"email"}) 
 	if err != nil {
 		t.Fatalf("Failed to udpate %v", err)
 	}
