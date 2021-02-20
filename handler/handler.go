@@ -70,7 +70,7 @@ func getUserProfileFromAuth(authenticationToken string) (dba.UserProfile, error)
 			"token", "=", token,
 		},
 	}
-	if err := userProfile.Find(dbConn, []string{}, wherePairs); err != nil {
+	if err := userProfile.Find(dbConn, []string{"id"}, wherePairs); err != nil {
 		return userProfile, err
 	}
 	return userProfile, nil
@@ -89,6 +89,7 @@ func TokenCheckMiddleware(next http.Handler) http.Handler {
 		}
 		userProfile, err := getUserProfileFromAuth(authenticationToken)
 		if err != nil {
+			fmt.Println(err)
 			WriteReply(int(http.StatusBadRequest), false, "Cannot find matched Token", w)
 			return
 		}
@@ -145,7 +146,7 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 
 type LoginOps struct {}
 
-func (lo LoginOps) searchUserByEmailAndReturnPassword(email, password string) error {
+func (lo LoginOps) searchUserByEmailAndCheckPassword(email, password string) (dba.UserProfile, error) {
 	profileFromDB := dba.UserProfile{}
 	selectCols := []string{"id", "email", "password"}
 	wherePairs := [][]string{
@@ -154,13 +155,15 @@ func (lo LoginOps) searchUserByEmailAndReturnPassword(email, password string) er
 		},
 	}
 	if err := profileFromDB.Find(dbConn, selectCols, wherePairs); err != nil {
-		return err
+		return profileFromDB, err
 	}
-	storedPassword := auth.ComposeBcryptPassword(email, password)
-	if ok := auth.BcryptCheck([]byte(profileFromDB.Password), []byte(password)); !ok {
-		return errors.New("Password Unmatched")
+	storedPassword := []byte(profileFromDB.Password)
+	requesterPassword := auth.ComposeBcryptPassword(email, password)
+
+	if ok := auth.BcryptCheck(storedPassword, requesterPassword); !ok {
+		return profileFromDB, errors.New("Password Unmatched")
 	}
-	return nil
+	return profileFromDB, nil
 }
 
 func (lo LoginOps) generateToken() (string, error) {
@@ -181,8 +184,9 @@ func (lo LoginOps) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		WriteReply(int(http.StatusBadRequest), false, "Cannot Parse Payload", w)
 		return
 	}
-	if err :=lo.searchUserByEmailAndReturnPassword(userProfile.Email, userProfile.Password); err != nil {
-		WriteReply(int(http.StatusBadRequest), false, "Wrong password", w)
+	storedUserProfile, err :=lo.searchUserByEmailAndCheckPassword(userProfile.Email, userProfile.Password); 
+	if err != nil {
+		WriteReply(int(http.StatusBadRequest), false, fmt.Sprintf("Wrong password %v", err), w)
 		return
 	}
 
@@ -191,6 +195,8 @@ func (lo LoginOps) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		WriteReply(int(http.StatusBadRequest), false, "Token Generation Error", w)
 		return
 	}
+	storedUserProfile.Token = token
+	storedUserProfile.Update(dbConn, []string{"token"})
 	reply := struct {
 		Token string `json:"token"`
 	}{ token }
@@ -223,7 +229,8 @@ func UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
 		WriteReply(int(http.StatusBadRequest), false, "Cannot Parse Payload", w)
 		return
 	}
-	if _, err := userProfile.Update(dbConn); err != nil {
+	updateables := userProfile.GetFilledKey()
+	if _, err := userProfile.Update(dbConn, updateables); err != nil {
 		WriteReply(int(http.StatusBadRequest), false, "Cannot Write Payload", w)
 		return
 	}

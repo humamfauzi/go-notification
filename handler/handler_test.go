@@ -60,10 +60,6 @@ func TestLogin(t *testing.T) {
 	w := httptest.NewRecorder()
 	CreateUserHandler(w, req)
 
-	exampleJson = `{
-		"email": "login@asd.asd",
-		"password": "wrong_password"
-	}`
 	jsonReader = strings.NewReader(exampleJson)
 	req = httptest.NewRequest(http.MethodPost, baseUrl + "/users/login", jsonReader) 
 	w = httptest.NewRecorder()
@@ -89,7 +85,48 @@ func TestLogin(t *testing.T) {
 }
 
 func TestCheckLogin(t *testing.T) {
+	exampleJson := `{
+		"email": "login@asd.asd",
+		"password": "rahasia"
+	}`
+	jsonReader := strings.NewReader(exampleJson)
+	req := httptest.NewRequest(http.MethodPost, baseUrl + "/users", jsonReader)
+	w := httptest.NewRecorder()
+	CreateUserHandler(w, req)
+
+	jsonReader = strings.NewReader(exampleJson)
+	req = httptest.NewRequest(http.MethodPost, baseUrl + "/users/login", jsonReader) 
+	w = httptest.NewRecorder()
+	loginOps := LoginOps{}
+	loginOps.ServeHTTP(w, req)
 	
+	resp := w.Result()
+	body, _ := ioutil.ReadAll(resp.Body)
+	reply := HandlerReply{}
+	json.Unmarshal(body, &reply)
+	t.Log(reply)
+	token := reply.Message.(map[string]interface{})["token"].(string)
+	jsonReader = strings.NewReader("")
+	req = httptest.NewRequest(http.MethodPost, baseUrl + "/users/check", jsonReader)
+	req.Header["Authentication"] = []string{"Bearer " + token,}
+	req.Header["Content-Type"] = []string{"application/json"}
+	w = httptest.NewRecorder()
+	checkLogin := CheckLogin{}
+	wrappedFunc := TokenCheckMiddleware(checkLogin)
+	wrappedFunc.ServeHTTP(w, req)
+	// checkLogin.ServeHTTP(w, req)
+
+	resp = w.Result()
+	body, _ = ioutil.ReadAll(resp.Body)
+	reply = HandlerReply{}
+	json.Unmarshal(body, &reply)
+
+	if reply.Code != http.StatusOK {
+		t.Fatalf("Should return ok but return %v", reply)
+	}
+
+	
+
 }
 
 func TestUpdateUserHandler(t *testing.T) {
