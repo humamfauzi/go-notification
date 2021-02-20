@@ -201,6 +201,20 @@ type UserProfile struct {
 	Token string `json:"token"`
 }
 
+func (up UserProfiles) GetFilledKey() []string {
+	nonEmpty := []string{}
+	if up.Email != "" {
+		nonEmpty = append(nonEmpty, "email")
+	}
+	if up.Password != "" {
+		nonEmpty = append(nonEmpty, "password")
+	}
+	if up.Token != "" {
+		nonEmpty = append(nonEmpty, "Token")
+	}
+	return nonEmpty
+}
+
 func (up UserProfile) ToStringJSON() string {
 	result, _ := json.Marshal(up)
 	return string(result)
