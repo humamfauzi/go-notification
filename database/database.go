@@ -369,10 +369,10 @@ func (up UserProfiles) BulkDelete(tx ITransaction) error {
 
 // ------- TOPIC MODEL FUNCTION --------- //
 type Topic struct {
-	Id int
-	UserId string
-	Title string
-	Desc string
+	Id int `json:"id"`
+	UserId string `json:"user_id"`
+	Title string `json:"title"`
+	Desc string `json:"description`
 }
 
 func (t Topic) InsertFormat() string {
