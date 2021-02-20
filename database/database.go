@@ -201,7 +201,7 @@ type UserProfile struct {
 	Token string `json:"token"`
 }
 
-func (up UserProfiles) GetFilledKey() []string {
+func (up UserProfile) GetFilledKey() []string {
 	nonEmpty := []string{}
 	if up.Email != "" {
 		nonEmpty = append(nonEmpty, "email")
