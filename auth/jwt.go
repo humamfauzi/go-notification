@@ -56,24 +56,26 @@ func CheckTokenExpiry(expiry interface{}) bool {
 	return true
 }
 
-func VerifyToken(authToken string, keyFunction func(token *jwt.Token) (interface{}, error)) bool {
+func VerifyToken(authToken string, keyFunction func(token *jwt.Token) (interface{}, error)) (string, bool) {
 	tokenBearer := ParseBearer(authToken)
 	token, err := jwt.Parse(tokenBearer, keyFunction)	
 	if err != nil {
-		return false
+		return "", false
 	}
 	claims, ok := token.Claims.(jwt.MapClaims);
 	if !ok {
-		return false
+		return "", false
 	}
 	if ok = CheckTokenExpiry(claims["exp"]); !ok {
 		fmt.Println(claims["exp"])
-		return false
+		return "", false
 	}
+
+	accessToken := claims["access_token"]
 	if token.Valid {
-		return true
+		return accessToken.(string), true
 	} else {
-		return false
+		return "", false
 	}
 }
 

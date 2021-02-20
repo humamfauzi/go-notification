@@ -35,10 +35,14 @@ func TestVerifyToken(t *testing.T) {
 	header := jwt.MapClaims{
 		"test": true,
 		"exp": time.Now().Add(time.Minute * 10).Unix(),
+		"access_token": "123",
 	}
 	result, _ := CreateToken(header, []byte(TEST_SECRET))
 	bearerToken := "Bearer " + result
-	ok := VerifyToken(bearerToken, keyFunc)
+	accessToken, ok := VerifyToken(bearerToken, keyFunc)
+	if accessToken != "123" {
+		t.Fatalf("want 123 get %v", accessToken)
+	}
 	if !ok {
 		t.Fatalf("Error")
 	}
