@@ -32,9 +32,7 @@ func KeyFunction(token *jwt.Token) (interface{}, error) {
 	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 		return nil, errors.New("asdlkj")
 	}
-	if ok := CheckTokenExpiry(token.Header["exp"]); !ok {
-		return nil, errors.New("Token Expired")
-	}
+
 	return GetAuthSecret(), nil
 }
 
@@ -69,7 +67,7 @@ func VerifyToken(authToken string, keyFunction func(token *jwt.Token) (interface
 		return false
 	}
 	if ok = CheckTokenExpiry(claims["exp"]); !ok {
-		fmt.Println(ok)
+		fmt.Println(claims["exp"])
 		return false
 	}
 	if token.Valid {
