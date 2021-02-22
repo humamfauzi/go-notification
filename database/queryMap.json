@@ -53,7 +53,7 @@
     "get": "SELECT %s FROM topics %s",
     "insert": "INSERT INTO topics (user_id, title, description) VALUES %s"
   },
-  "subcriber": {
+  "subscriber": {
     "create": "INSERT INTO subscribers (topic_id, user_id) VALUES %s",
     "delete": "DELETE FROM subscribers WHERE id = %s"
   },

@@ -472,7 +472,7 @@ type Subscriber struct {
 	UserId string `json:"user_id"`
 }
 func (s Subscriber) InsertFormat() string {
-	return fmt.Sprintf("(%d,%s)", s.TopicId, s.UserId)
+	return fmt.Sprintf("(%d,'%s')", s.TopicId, s.UserId)
 }
 
 func (s Subscriber) Insert(tx ITransaction) (int64, error) {
