@@ -467,9 +467,9 @@ func (t *Topics) Scan(rows RowsScan) error {
 
 // ------- SUBSCRIBER MODEL FUNCTION --------- //
 type Subscriber struct {
-	Id int
-	TopicId int
-	UserId string
+	Id int `json:"id"`
+	TopicId int `json:"topic_id"`
+	UserId string `json:"user_id"`
 }
 func (s Subscriber) InsertFormat() string {
 	return fmt.Sprintf("(%d,%s)", s.TopicId, s.UserId)
@@ -499,11 +499,11 @@ func (s Subscriber) Delete(tx ITransaction) (int64, error) {
 
 // -------- NOTIFICATION MODEL FUNCTION --------- //
 type Notification struct {
-	Id int
-	UserId string
-	TopicId int
-	Message string
-	IsRead bool
+	Id int `json:"id"`
+	UserId string `json:"user_id"`
+	TopicId int `json:"topic_id"`
+	Message string `json:"message"`
+	IsRead bool `json: "is_read"`
 }
 
 func (n Notification) InsertFormat() string {
