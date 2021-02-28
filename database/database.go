@@ -439,6 +439,9 @@ func (t *Topics) Get(tx ITransaction) error {
 	wherePairs := [][]string{}
 	afterWhere := [][]string{
 		[]string{
+			"order", "by", "id"
+		}
+		[]string{
 			"limit", "10",
 		},
 	}
