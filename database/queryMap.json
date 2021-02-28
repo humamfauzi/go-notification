@@ -60,10 +60,11 @@
   "notification": {
     "get": "SELECT %s FROM notifications %s",
     "bulkInsertNotification": "INSERT INTO notifications (user_id, topic_id, message) VALUES %s",
-    "insertNotification": "INSERT INTO notifications (user_id, topic_id, message) VALUES (%s, %d, %s)"
+    "insertNotification": "INSERT INTO notifications (user_id, topic_id, message) VALUES %s"
     
   },
   "notifications": {
+    "get": "SELECT %s FROM notifications %s",
     "delete": "DELETE FROM notifications WHERE id IN %s",
     "updateRead": "UPDATE notifications SET is_read = true WHERE id IN %s"
   }

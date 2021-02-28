@@ -47,6 +47,17 @@ func (mda MysqlDatabaseAccess) ConnectDatabase() (ITransactionSQL, error) {
 	}
 	return db, nil
 }
+type IColumnMatcher interface {
+	ColumnMatcher (columnName string) interface{}
+}
+
+func dynamicScan(selectColumn []string, model IColumnMatcher) []interface{} {
+	scanArray := make([]interface{}, len(selectColumn))
+	for index, v := range selectColumn {
+		scanArray[index] = model.ColumnMatcher(v)
+	}
+	return scanArray
+}
 
 type ITransaction interface {
 	Query(query string, args ...interface{}) (*sql.Rows, error)
@@ -220,14 +231,6 @@ func (up UserProfile) ToStringJSON() string {
 	return string(result)
 }
 
-func (up *UserProfile) DynamicScan(selectColumn []string) []interface{} {
-	scanArray := make([]interface{}, len(selectColumn))
-	for index, v := range selectColumn {
-		scanArray[index] = up.ColumnMatcher(v)
-	}
-	return scanArray
-}
-
 func (up *UserProfile) ColumnMatcher(columnName string) interface{} {
 	switch columnName {
 	case "id":
@@ -277,7 +280,7 @@ func (up *UserProfile) Find(tx ITransaction, selectColumn []string, wherePairs[]
 func (up *UserProfile) Scan(rows RowsScan, selectRows []string) error {
 	defer rows.Close()
 	count := 0
-	scanArray := up.DynamicScan(selectRows)
+	scanArray := dynamicScan(selectRows, up)
 	for rows.Next(){	
 		if err := rows.Scan(scanArray...); err != nil {
 			return err
@@ -410,6 +413,7 @@ func (t Topic) Delete(tx ITransaction) (int64, error) {
 	return lastInsertId, nil
 }
 
+
 type Topics []Topic
 
 func (t Topics) InsertFormat() string {
@@ -531,17 +535,35 @@ func (n *Notification) Get(tx ITransaction) error {
 	if err != nil {
 		return err
 	}
-	if err := n.Scan(rows); err != nil {
+	if err := n.Scan(rows, selectColumn); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (n *Notification) Scan(rows RowsScan) error {
+func (n *Notification) ColumnMatcher(column string) interface{} {
+	switch column {
+	case "id":
+		return &n.Id
+	case "user_id":
+		return &n.UserId
+	case "topic_id":
+		return &n.TopicId
+	case "message":
+		return &n.Message
+	case "is_read":
+		return &n.IsRead
+	default:
+		return nil
+	}
+}
+
+func (n *Notification) Scan(rows RowsScan, selectRows []string) error {
 	defer rows.Close()
 	count := 0
+	scanArray := dynamicScan(selectRows, n)
 	for rows.Next() {
-		if err := rows.Scan(&n.Id, &n.UserId, &n.TopicId, &n.Message, &n.IsRead); err != nil {
+		if err := rows.Scan(scanArray...); err != nil {
 			return err
 		}
 		count++
@@ -569,6 +591,39 @@ func (n Notifications) Insert(tx ITransaction) (int64, error) {
 		return 0, err
 	}
 	return lastInsertId, nil
+}
+
+func (n *Notifications) Get(tx ITransaction, selectColumn []string, wherePairs [][]string) error {
+	path := "notifications.get"
+	if len(selectColumn) == 0 {
+		selectColumn = []string{"*"}
+	}
+	rows, err := ReadFromDB(tx, path, selectColumn, wherePairs)
+	if err != nil {
+		return err
+	}
+	if err := n.Scan(rows, selectColumn); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (n *Notifications) Scan(rows RowsScan, selectColumn []string) error {
+	defer rows.Close()
+	count := 0
+	for rows.Next() {
+		notif := &Notification{}
+		scanArray := dynamicScan(selectColumn, notif)
+		if err := rows.Scan(scanArray...); err != nil {
+			return err
+		}
+		(*n) = append(*n, *notif)
+		count++
+	}
+	if count == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 func (n Notifications) ComposeInputBulkFormat() string {
