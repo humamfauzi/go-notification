@@ -582,7 +582,7 @@ type Notification struct {
 	UserId string `json:"user_id"`
 	TopicId int `json:"topic_id"`
 	Message string `json:"message"`
-	IsRead bool `json: "is_read"`
+	IsRead bool `json:"is_read"`
 }
 
 func (n Notification) InsertFormat() string {
