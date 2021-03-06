@@ -451,7 +451,7 @@ func (t *Topics) Get(tx ITransaction) error {
 	wherePairs := [][]string{}
 	afterWhere := [][]string{
 		[]string{
-			"order by", "id",
+			"order by", "id", "desc",
 		},
 		[]string{
 			"limit", "10",
