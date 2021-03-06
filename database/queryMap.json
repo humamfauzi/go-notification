@@ -57,6 +57,9 @@
     "create": "INSERT INTO subscribers (topic_id, user_id) VALUES %s",
     "delete": "DELETE FROM subscribers WHERE id = %s"
   },
+  "subscribers": {
+    "get": "SELECT %s FROM subscribers %s"
+  },
   "notification": {
     "get": "SELECT %s FROM notifications %s",
     "bulkInsertNotification": "INSERT INTO notifications (user_id, topic_id, message) VALUES %s",

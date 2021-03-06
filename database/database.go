@@ -49,9 +49,13 @@ func (mda MysqlDatabaseAccess) ConnectDatabase() (ITransactionSQL, error) {
 }
 type IColumnMatcher interface {
 	ColumnMatcher (columnName string) interface{}
+	GetAllColumn() []interface{}
 }
 
 func dynamicScan(selectColumn []string, model IColumnMatcher) []interface{} {
+	if len(selectColumn) == 1 && selectColumn[0] == "*" {
+		return model.GetAllColumn()
+	}
 	scanArray := make([]interface{}, len(selectColumn))
 	for index, v := range selectColumn {
 		scanArray[index] = model.ColumnMatcher(v)
@@ -241,6 +245,14 @@ func (up *UserProfile) ColumnMatcher(columnName string) interface{} {
 		return &up.Password
 	default:
 		return nil
+	}
+}
+
+func (up *UserProfile) GetAllColumn() []interface{} {
+	return []interface{}{
+		&up.Id,
+		&up.Email,
+		&up.Password,
 	}
 }
 
@@ -478,6 +490,7 @@ type Subscriber struct {
 	TopicId int `json:"topic_id"`
 	UserId string `json:"user_id"`
 }
+
 func (s Subscriber) InsertFormat() string {
 	return fmt.Sprintf("(%d,'%s')", s.TopicId, s.UserId)
 }
@@ -503,6 +516,65 @@ func (s Subscriber) Delete(tx ITransaction) (int64, error) {
 	}
 	return lastInsertId, nil
 }
+
+func (s *Subscriber) ColumnMatcher(columnName string) interface{} {
+	switch columnName {
+	case "id":
+		return &s.Id
+	case "topic_id":
+		return &s.TopicId
+	case "user_id":
+		return &s.UserId
+	default:
+		return nil
+	}
+}
+
+func (s *Subscriber) GetAllColumn() []interface{} {
+	return []interface{} {
+		&s.Id,
+		&s.TopicId,
+		&s.UserId,
+	}
+}
+
+type Subscribers []Subscriber
+
+func (s *Subscribers) Get(tx ITransaction, selectColumn []string, wherePairs [][]string) error {
+	path := "subscribers.get"
+	if len(selectColumn) == 0 {
+		selectColumn = []string{"*"}
+	}
+	rows, err := ReadFromDB(tx, path, selectColumn, wherePairs)
+	if err != nil {
+		return err
+	}
+
+	if err := s.Scan(rows, selectColumn); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Subscribers) Scan(rows RowsScan, selectColumn []string) error {
+	defer rows.Close()
+	count := 0
+	for rows.Next() {
+		subscriber := &Subscriber{}
+		scanArray := dynamicScan(selectColumn, subscriber)
+		if err := rows.Scan(scanArray...); err != nil {
+			return err
+		}
+		(*s) = append(*s, *subscriber)
+		count++
+	}
+	if count == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+
 
 // -------- NOTIFICATION MODEL FUNCTION --------- //
 type Notification struct {
@@ -558,6 +630,16 @@ func (n *Notification) ColumnMatcher(column string) interface{} {
 		return &n.IsRead
 	default:
 		return nil
+	}
+}
+
+func (n *Notification) GetAllColumn() []interface{} {
+	return []interface{}{
+		&n.Id,
+		&n.UserId,
+		&n.TopicId,
+		&n.Message,
+		&n.IsRead,
 	}
 }
 
