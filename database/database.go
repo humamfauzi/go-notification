@@ -137,7 +137,9 @@ func createAfterWherePair(pairs [][]string) string {
 	}
 	finalQuery := ""
 	for i := 0; i < len(pairs); i++ {
-		finalQuery += fmt.Sprintf(" %s %s ", pairs[i][0], pairs[i][1])
+		for j := 0; i < len(pairs[i]); i++ {
+			finalQuery += fmt.Sprintf(" %s ", pairs[i][j])
+		}
 	}
 	return finalQuery
 }
