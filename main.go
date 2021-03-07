@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
-	// "time"
+	"time"
 
 	"github.com/gorilla/mux"
 	dba "github.com/humamfauzi/go-notification/database"
@@ -34,18 +34,26 @@ func main() {
 	
 	log.Println("Init server")
 	router := mux.NewRouter()
-	router.Use(LoggerMiddleware)
+	router.Use(handler.LoggerMiddleware)
 
-	router.HandleFunc("/user/create", CreateUserHandler).Methods(http.MethodPost)
-	router.HandleFunc("/user/{id}", UpdateUserHandler).Methods(http.MethodPut)
-	router.HandleFunc("/user/{id}", DeleteUserHandler).Methods(http.MethodDelete)
+	router.HandleFunc("/user", handler.CreateUserHandler).Methods(http.MethodPost)
 
-	router.HandleFunc("/topic/create", CreateTopicHandler).Methods(http.MethodPost)
-	router.HandleFunc("/topic", GetTopicHandler).Methods(http.MethodsGet)
-	router.HandleFunc("/subscribe/{id_topic}", CreateSubscribeHandler).Methods(http.MethodPost)
+	loginHandler := handler.LoginOps{}
+	router.Handle("/user/login", loginHandler).Methods(http.MethodPost)
 
-	router.HandleFunc("/notification/{id_topic}", CreateNotificationHandler).Methods(http.MethodPost)
-	router.HandleFunc("/notification", GetNotificationHandler).Methods(http.MethodGet)
+	checkLoginHandler := handler.CheckLogin{}
+	router.Handle("/user/check", checkLoginHandler).Methods(http.MethodPost)
+
+	router.HandleFunc("/user", handler.UpdateUserHandler).Methods(http.MethodPut)
+	router.HandleFunc("/user", handler.DeleteUserHandler).Methods(http.MethodPut)
+
+	router.HandleFunc("/topics", handler.CreateTopicHandler).Methods(http.MethodPost)
+	router.HandleFunc("/topics", handler.GetTopicHandler).Methods(http.MethodGet)
+	router.HandleFunc("/subscribe", handler.CreateSubscribeHandler).Methods(http.MethodPost)
+
+	createNotificationHandler := handler.CreateNotification{}
+	router.Handle("/notification", createNotificationHandler).Methods(http.MethodPost)
+	router.HandleFunc("/notification", handler.GetNotificationHandler).Methods(http.MethodGet)
 
 
 	server := &http.Server{

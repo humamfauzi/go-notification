@@ -396,12 +396,6 @@ func (cn CreateNotification) IsTopicBelongToUser(userId string, topicId int) boo
 }
 
 func (cn CreateNotification) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// userProfile, err := getRequesterProfile(r)
-	// if err != nil {
-	// 	WriteReply(int(http.StatusBadRequest), false, "Cannot identify requester", w)
-	// 	return
-	// }
-
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		WriteReply(int(http.StatusBadRequest), false, "Cannot Read Payload", w)

@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"strings"
 	"time"
+	"encoding/json"
 )
 
 const (
@@ -31,4 +32,12 @@ func pickRandomCharacter(collection string) string {
 	default:
 		return string(randomAlphabet[rand.Intn(len(randomAlphabet))])
 	}
+}
+
+func ConvertMapToStruct(originalMap map[string]interface{}, destination interface{}) error {
+	jsonResult, err := json.Marshal(originalMap)
+	if err != nil {
+		return err
+	}
+	json.Unmarshal(jsonResult, &destination)
 }
