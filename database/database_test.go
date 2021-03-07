@@ -173,7 +173,9 @@ func TestGetTopics(t *testing.T) {
 	}
 
 	getTopics := Topics{}
-	if err := getTopics.Get(db); err != nil {
+	selectColumn := []string{"id"}
+
+	if err := getTopics.Get(db, selectColumn, [][]string{}, [][]string{}); err != nil {
 		t.Fatalf("Cannot get topics %v", err)
 	}
 

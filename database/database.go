@@ -438,6 +438,30 @@ func (t Topics) InsertFormat() string {
 	return strings.Join(finalQuery, ",")
 }
 
+func (t *Topic) ColumnMatcher(column string) interface{} {
+	switch column {
+	case "id":
+		return &t.Id
+	case "user_id":
+		return &t.UserId
+	case "desc":
+		return &t.Desc
+	case "title":
+		return &t.Title
+	default:
+		return nil
+	}
+}
+
+func (t *Topic) GetAllColumn() []interface{} {
+	return []interface{}{
+		&t.Id,
+		&t.UserId,
+		&t.Desc,
+		&t.Title,
+	}
+}
+
 func (t Topics) Insert(tx ITransaction) (int64, error) {
 	path := "topics.insert"
 	lastInsertId, err := WriteToDB(tx, path, t.InsertFormat())
@@ -447,37 +471,28 @@ func (t Topics) Insert(tx ITransaction) (int64, error) {
 	return lastInsertId, nil
 }
 
-func (t *Topics) Get(tx ITransaction) error {
+func (t *Topics) Get(tx ITransaction, selectColumn []string, wherePairs [][]string, afterWhere [][]string) error {
 	path := "topics.get"
-	selectColumn := []string{"id", "user_id", "title", "description"}
-	wherePairs := [][]string{}
-	afterWhere := [][]string{
-		[]string{
-			"order by", "id", "desc",
-		},
-		[]string{
-			"limit", "10",
-		},
-	}
 	rows, err := ReadFromDB(tx, path, selectColumn, wherePairs, afterWhere)
 	if err != nil {
 		return err
 	}
-	if err := t.Scan(rows); err != nil {
+	if err := t.Scan(rows, selectColumn); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (t *Topics) Scan(rows RowsScan) error {
+func (t *Topics) Scan(rows RowsScan, selectColumn []string) error {
 	defer rows.Close()
 	count := 0
 	for rows.Next() {
-		tb := Topic{}
-		if err := rows.Scan(&tb.Id, &tb.UserId, &tb.Title, &tb.Desc); err != nil {
+		tb := &Topic{}
+		scanArray := dynamicScan(selectColumn, tb)
+		if err := rows.Scan(scanArray...); err != nil {
 			return err
 		}
-		(*t) = append(*t, tb)
+		(*t) = append(*t, *tb)
 		count++
 	}
 	if count == 0 {
